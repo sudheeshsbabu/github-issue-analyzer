@@ -6,15 +6,20 @@ import database
 
 from dotenv import load_dotenv
 
+from contextlib import asynccontextmanager
+
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    database.init_db()
+    yield
+    # Shutdown logic (if any) would go here
+
+app = FastAPI(lifespan=lifespan)
 github_client = GitHubClient()
 # LLM Client is now functional via generate_analysis
-
-@app.on_event("startup")
-def startup_event():
-    database.init_db()
 
 
 
