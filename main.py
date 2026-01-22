@@ -1,11 +1,16 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from schemas import ScanRequest, ScanResponse, AnalyzeRequest, AnalyzeResponse
-from clients import GitHubClient, LLMClient
+from clients import GitHubClient
+from llm_client import generate_analysis
 import database
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 github_client = GitHubClient()
-llm_client = LLMClient()
+# LLM Client is now functional via generate_analysis
 
 @app.on_event("startup")
 def startup_event():
@@ -67,7 +72,7 @@ def analyze_repo(request: AnalyzeRequest):
         return AnalyzeResponse(analysis="No issues found for this repo.")
 
     try:
-        analysis = llm_client.analyze(request.prompt, issues)
+        analysis = generate_analysis(request.prompt, issues)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
         

@@ -28,9 +28,6 @@ class GitHubClient:
                     break
                 
                 for item in data:
-                    print("---------\n")
-                    print(f"item = {item}")
-                    print("---------\n")
                     if "pull_request" not in item:
                         all_issues.append(item)
                 
@@ -42,15 +39,3 @@ class GitHubClient:
                 
         return all_issues
 
-class LLMClient:
-    def analyze(self, prompt: str, issues: List[Dict[str, Any]]) -> str:
-        # Mock LLM analysis
-        # Combine issues into a context string
-        # Truncate if too long (simple char limit for mock)
-        
-        context_preview = ""
-        for issue in issues[:5]: # Take top 5 for summary to keep mock simple
-            context_preview += f"- {issue.get('title')} (#{issue.get('id')})\n"
-        
-        # Simulated analysis result
-        return f"MOCK ANALYSIS RESULT:\nPrompt: {prompt}\n\nBased on {len(issues)} issues, here is the analysis:\n\nThe issues primarily concern...\n(Sample Context: \n{context_preview}\n...)"
