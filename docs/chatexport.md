@@ -370,4 +370,239 @@ Create a gemini llm model class in addition to OpenAI and Anthropic
 
 *User accepted the command `curl -X POST http://127.0.0.1:8000/analyze -H "Content-Type: application/json" -d '{"repo": "tiangolo/typer", "prompt": "Test Gemini"}'`*
 
+### User Input
+
+You are a senior backend engineer and test automation expert.
+
+Create comprehensive test cases for this project with the goal of achieving maximum code coverage(90+%)
+
+Tasks for each unit test
+- Test basic functionality
+- Test negative result
+- Test an edge case
+
+*Listed directory [gihub-analyzer](file:///home/sud/assignments/gihub-analyzer) *
+
+*Edited relevant file*
+
+*Listed directory [tests](file:///home/sud/assignments/gihub-analyzer/tests) *
+
+*Viewed [main.py](file:///home/sud/assignments/gihub-analyzer/main.py) *
+
+*Viewed [clients.py](file:///home/sud/assignments/gihub-analyzer/clients.py) *
+
+*Viewed [llm_client.py](file:///home/sud/assignments/gihub-analyzer/llm_client.py) *
+
+*Viewed [database.py](file:///home/sud/assignments/gihub-analyzer/database.py) *
+
+*Viewed [requirements.txt](file:///home/sud/assignments/gihub-analyzer/requirements.txt) *
+
+*Edited relevant file*
+
+### User Input
+
+
+
+*User accepted the command `pip install pytest pytest-asyncio pytest-cov httpx`*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*User accepted the command `pytest --cov=. --cov-report=term-missing`*
+
+*Edited relevant file*
+
+*User accepted the command `PYTHONPATH=. pytest --cov=. --cov-report=term-missing`*
+
+*Edited relevant file*
+
+*User accepted the command `PYTHONPATH=. pytest --cov=. --cov-report=term-missing`*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+### User Input
+
+I am getting the following import error while testing on a seperate cli. What could be the issue?
+
+___________________________________________________________________________ ERROR collecting tests/test_clients.py ___________________________________________________________________________
+ImportError while importing test module '/home/sud/assignments/gihub-analyzer/tests/test_clients.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_clients.py:4: in <module>
+    from clients import GitHubClient
+E   ModuleNotFoundError: No module named 'clients'
+
+
+*Edited relevant file*
+
+*User accepted the command `pytest`*
+
+*Edited relevant file*
+
+### User Input
+
+Fix the following deprecated warning issue in main.py
+on_event is deprecated, use lifespan event handlers instead.
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+    @app.on_event("startup")
+
+
+*Viewed [main.py](file:///home/sud/assignments/gihub-analyzer/main.py) *
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Viewed [task.md](file:///home/sud/.gemini/antigravity/brain/a82882bf-a7f9-48cc-8cb9-56c4fed81201/task.md) *
+
+*User accepted the command `pytest`*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+### User Input
+
+System role: You are a Lead Engineer preparing a production-quality take-home submission.
+
+Context:
+This project is a FastAPI backend that:
+- Fetches GitHub issues via POST /scan
+- Caches them locally using a single chosen storage option
+- Analyzes cached issues via POST /analyze using an LLM (mock by default)
+
+Goal:
+Prepare this project for public GitHub submission with Docker support and clear documentation that explains design decisions, testing, and AI-assisted development workflow.
+
+Requirements:
+
+1. Docker setup:
+   - Create a Dockerfile suitable for running the FastAPI app
+   - Use a lightweight Python base image
+   - Expose the appropriate port
+   - Ensure environment-variable-based configuration (no secrets baked in)
+   - The container should run the app with a single command
+
+2. Docker usage documentation:
+   - Explain how to build and run the container
+   - Mention how to optionally provide LLM API keys via environment variables
+   - Ensure the app runs even without any keys (mock LLM)
+
+3. README structure:
+   - Create a main README.md at the repo root
+   - If content becomes large, split into:
+     - README.md (overview & quick start)
+     - docs/testing.md (tests & coverage)
+     - docs/prompts.md (prompt history)
+   - Clearly link between these files
+
+4. README.md must include:
+   - Project overview
+   - How to run the server (local + Docker)
+   - Why the chosen local storage option was selected (SQLite / JSON / in-memory)
+   - Clear explanation of caching strategy
+   - LLM integration approach (mock by default, env-based providers)
+   - Limitations and future improvements
+
+5. Prompt transparency (very important):
+   - Create a prompts.md (or prompt.md if required) file
+   - Document:
+     - Prompts sent to AI coding tools (e.g., Cursor)
+     - Prompts used for architecture/design decisions
+     - Prompts used to debug or refactor code
+     - Prompts used inside the /analyze endpoint to construct the final LLM request
+   - Prompts do NOT need to be perfect; realism is preferred
+
+6. Testing documentation:
+   - Clearly state:
+     - Whether tests exist or not
+     - What is currently covered (e.g., API happy paths, edge cases)
+     - What is NOT covered and why
+   - If no tests exist, explain the rationale honestly
+   - Include instructions on how tests would be run
+
+7. Constraints:
+   - Do NOT introduce unnecessary tools or services
+   - Do NOT add Redis or external infrastructure
+   - Keep documentation honest, clear, and reviewer-friendly
+   - Assume this is a take-home or evaluation task
+
+Output:
+- Dockerfile
+- Folder structure suggestion
+- README.md content
+- docs/testing.md content
+- docs/prompts.md (or prompt.md) content
+- Clear links between documents
+- Comments explaining documentation decisions
+
+*Listed directory [gihub-analyzer](file:///home/sud/assignments/gihub-analyzer) *
+
+*Viewed [Prompt.md](file:///home/sud/assignments/gihub-analyzer/Prompt.md) *
+
+*Edited relevant file*
+
+*User accepted the command `mkdir -p docs`*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Listed directory [gihub-analyzer](file:///home/sud/assignments/gihub-analyzer) *
+
+*Listed directory [docs](file:///home/sud/assignments/gihub-analyzer/docs) *
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+### User Input
+
+Create a shell script to perform docker compose down and build+up for ease of use for a reviewer
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*User accepted the command `chmod +x run_docker.sh`*
+
+*Edited relevant file*
+
+*Edited relevant file*
+
+*User accepted the command `ls -l run_docker.sh`*
+
+### User Input
+
+Mention in READM.md that you need to create a simple .env file and put llm api keys for using them
+
+*Viewed [README.md](file:///home/sud/assignments/gihub-analyzer/README.md) *
+
+*Edited relevant file*
+
+*Edited relevant file*
+
 *Edited relevant file*

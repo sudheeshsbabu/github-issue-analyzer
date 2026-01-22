@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: github-analyzer
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - GEMINI_API_KEY
+    env_file:
+      - .env
+    volumes:
+      - ./issues.db:/app/issues.db

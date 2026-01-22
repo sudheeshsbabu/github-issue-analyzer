@@ -42,7 +42,7 @@ class OpenAILLM:
     def get_chunk_size(self) -> int:
         return 50  # GPT-3.5 can handle more context
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, total_issues: int) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -70,7 +70,7 @@ class AnthropicLLM:
     def get_chunk_size(self) -> int:
         return 100  # Anthropic models have large context windows
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, total_issues: int) -> str:
         headers = {
             "x-api-key": self.api_key,
             "anthropic-version": "2023-06-01",
@@ -99,7 +99,7 @@ class GeminiLLM:
     def get_chunk_size(self) -> int:
         return 200  # Gemini 1.5 has a very large context window
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, total_issues: int) -> str:
         params = {"key": self.api_key}
         headers = {"Content-Type": "application/json"}
         data = {
