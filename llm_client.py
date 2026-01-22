@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Protocol, Optional
 # --- Provider Interfaces ---
 
 class LLMProvider(Protocol):
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, total_issues: int) -> str:
         """Generates a text response for the given prompt."""
         ...
 
@@ -18,13 +18,15 @@ class MockLLM:
     def get_chunk_size(self) -> int:
         return 20
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, total_issues: int) -> str:
         """Returns a static mock response for testing/default behavior."""
+        limit = 100
+        limit = limit if len(prompt) > limit else len(prompt)
         return (
             "**MOCK ANALYSIS RESULT**\n\n"
             "This is a simulated response because no valid API key was found.\n"
             "The system successfully processed the logic without external calls.\n\n"
-            f"Prompt Preview: {prompt[:100]}...\n\n"
+            f"Prompt Preview for {total_issues} issues: {prompt[:limit]}...\n\n"
             "**Key Insights (Simulated):**\n"
             "1. Issue velocity is stable.\n"
             "2. Top labels include 'bug' and 'feature-request'.\n"
@@ -172,7 +174,7 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
             f"Issues Context:\n{context}\n\n"
             f"Please provide the analysis."
         )
-        return client.generate(full_prompt)
+        return client.generate(full_prompt, total_issues)
 
     # Map-Reduce for large sets
     # 1. Map: Analyze chunks
@@ -190,7 +192,7 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
         )
         
         # We process chunks sequentially here (could be parallelized with async, but keeping it simple/safe)
-        summary = client.generate(chunk_prompt)
+        summary = client.generate(chunk_prompt, total_issues)
         chunk_summaries.append(f"Chunk {i+1}/{num_chunks} Summary:\n{summary}")
 
     # 2. Reduce: Final synthesis
@@ -200,8 +202,5 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
         f"User Prompt: {prompt}\n\n"
         f"Intermediate Summaries:\n{combined_summaries}\n\n"
         f"Synthesize these summaries into a cohesive answer addressing the user prompt."
-    )
-
-    print(f"Final Prompt length: {len(final_prompt)}")
-    
-    return client.generate(final_prompt)
+    )    
+    return client.generate(final_prompt, total_issues)
