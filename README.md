@@ -25,6 +25,9 @@ Add your API keys to the file:
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AIza...
+OLLAMA_BASE_URL=http://localhost:11434/v1 # Optional if you have Ollama installed locally
+OLLAMA_MODEL=llama3 # Optional, default: llama3
+
 ```
 The application will automatically detect these keys.
 

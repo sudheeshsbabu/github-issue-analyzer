@@ -185,6 +185,46 @@ class GeminiLLM:
         except Exception as e:
             return f"Error calling Gemini: {str(e)}"
 
+class OllamaLLM:
+    def __init__(self, base_url: str, model: str):
+        self.base_url = f"{base_url.rstrip('/')}/chat/completions"
+        self.model = model
+        self.api_key = "ollama"  # Required header structure but ignored by Ollama
+
+    def get_chunk_size(self) -> int:
+        return 50  # Conservative default for local models
+
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=2, max=16),
+        retry=retry_if_exception_type(httpx.HTTPStatusError),
+        reraise=True
+    )
+    def _call_api(self, prompt: str) -> Dict[str, Any]:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False
+        }
+
+        with httpx.Client(timeout=60.0) as client:
+            response = client.post(self.base_url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+
+    def generate(self, prompt: str, total_issues: int) -> str:
+        try:
+            print(f"prompt: {prompt}\n")
+            result = self._call_api(prompt)
+            print(f"result: {result}\n")
+            return result["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"Error calling Ollama: {str(e)}"
+
 # --- Factory / Selection Logic ---
 
 def get_llm_client() -> LLMProvider:
@@ -192,6 +232,8 @@ def get_llm_client() -> LLMProvider:
     openai_key = os.getenv("OPENAI_API_KEY")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
+    ollama_url = os.getenv("OLLAMA_BASE_URL")
+    ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
 
     if openai_key:
         return OpenAILLM(openai_key)
@@ -199,6 +241,8 @@ def get_llm_client() -> LLMProvider:
         return AnthropicLLM(anthropic_key)
     elif gemini_key:
         return GeminiLLM(gemini_key)
+    elif ollama_url:
+        return OllamaLLM(ollama_url, ollama_model)
     else:
         return MockLLM()
 
