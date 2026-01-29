@@ -2,6 +2,7 @@ import os
 import httpx
 import math
 from typing import List, Dict, Any, Protocol, Optional
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # --- Provider Interfaces ---
 
@@ -33,33 +34,75 @@ class MockLLM:
             "3. No critical blockers identified in this mock run."
         )
 
+def _is_retryable_error(e: BaseException) -> bool:
+    return (
+        isinstance(e, httpx.HTTPStatusError) and 
+        (e.response.status_code == 429 or e.response.status_code >= 500)
+    )
+
 class OpenAILLM:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.url = "https://api.openai.com/v1/chat/completions"
-        self.model = "gpt-3.5-turbo" # Defaulting to a cost-effective model
+        self.url = "https://api.openai.com/v1/responses"
+        self.model = "gpt-4o-mini"
+        self.client = httpx.Client(timeout=30.0)
 
     def get_chunk_size(self) -> int:
-        return 50  # GPT-3.5 can handle more context
+        # Keep this conservative for TPM safety
+        return 5
 
-    def generate(self, prompt: str, total_issues: int) -> str:
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=2, max=16),
+        retry=retry_if_exception_type(httpx.HTTPStatusError),
+        reraise=True
+    )
+    def _call_api(self, prompt: str) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+
         data = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
+            "input": prompt
         }
+
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(self.url, headers=headers, json=data)
-                response.raise_for_status()
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
+            response = self.client.post(
+                self.url,
+                headers=headers,
+                json=data
+            )
+            response.raise_for_status()
+
+            result = response.json()
+
+            # Responses API convenience field
+            return result["output_text"]
+
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            print(f"HTTP error {status}")
+
+            if status == 429:
+                print("⚠️ Rate limited")
+                print("Retry-After:",
+                      e.response.headers.get("retry-after"))
+
+            # Re-raise so tenacity can retry
+            raise
+
+    def generate(self, prompt: str, total_issues: int) -> str:
+        try:
+            print("Generating response...")
+            return self._call_api(prompt)
         except Exception as e:
             return f"Error calling OpenAI: {str(e)}"
+
+    def close(self):
+        self.client.close()
+
 
 class AnthropicLLM:
     def __init__(self, api_key: str):
@@ -70,7 +113,13 @@ class AnthropicLLM:
     def get_chunk_size(self) -> int:
         return 100  # Anthropic models have large context windows
 
-    def generate(self, prompt: str, total_issues: int) -> str:
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=2, max=16),
+        retry=retry_if_exception_type(httpx.HTTPStatusError),
+        reraise=True
+    )
+    def _call_api(self, prompt: str) -> Dict[str, Any]:
         headers = {
             "x-api-key": self.api_key,
             "anthropic-version": "2023-06-01",
@@ -81,12 +130,15 @@ class AnthropicLLM:
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 1000
         }
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(self.url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+
+    def generate(self, prompt: str, total_issues: int) -> str:
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(self.url, headers=headers, json=data)
-                response.raise_for_status()
-                result = response.json()
-                return result["content"][0]["text"]
+            result = self._call_api(prompt)
+            return result["content"][0]["text"]
         except Exception as e:
             return f"Error calling Anthropic: {str(e)}"
 
@@ -99,7 +151,13 @@ class GeminiLLM:
     def get_chunk_size(self) -> int:
         return 200  # Gemini 1.5 has a very large context window
 
-    def generate(self, prompt: str, total_issues: int) -> str:
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=2, max=16),
+        retry=retry_if_exception_type(httpx.HTTPStatusError),
+        reraise=True
+    )
+    def _call_api(self, prompt: str) -> Dict[str, Any]:
         params = {"key": self.api_key}
         headers = {"Content-Type": "application/json"}
         data = {
@@ -107,20 +165,23 @@ class GeminiLLM:
                 "parts": [{"text": prompt}]
             }]
         }
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(self.url, params=params, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+
+    def generate(self, prompt: str, total_issues: int) -> str:
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(self.url, params=params, headers=headers, json=data)
-                response.raise_for_status()
-                result = response.json()
-                # Parse safety settings or empty responses safely
-                if "candidates" not in result or not result["candidates"]:
-                    return "Error: No candidates returned from Gemini (possible safety block)."
-                
-                content = result["candidates"][0].get("content")
-                if not content:
-                     return "Error: Empty content from Gemini."
-                     
-                return content["parts"][0]["text"]
+            result = self._call_api(prompt)
+            # Parse safety settings or empty responses safely
+            if "candidates" not in result or not result["candidates"]:
+                return "Error: No candidates returned from Gemini (possible safety block)."
+            
+            content = result["candidates"][0].get("content")
+            if not content:
+                    return "Error: Empty content from Gemini."
+                    
+            return content["parts"][0]["text"]
         except Exception as e:
             return f"Error calling Gemini: {str(e)}"
 
@@ -169,10 +230,11 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
     if total_issues <= chunk_size:
         context = "\n".join([format_issue(i) for i in issues])
         full_prompt = (
-            f"You are analyzing GitHub issues. \n"
-            f"User Prompt: {prompt}\n\n"
-            f"Issues Context:\n{context}\n\n"
-            f"Please provide the analysis."
+            "System: You are a senior software triage assistant."
+            "Synthesize issue summaries into a coherent, prioritized analysis.\n"
+            f"User Prompt: {prompt}\n"
+            f"Issues Context:{context}\n"
+            "Provide a clear, actionable final analysis."
         )
         return client.generate(full_prompt, total_issues)
 
@@ -184,12 +246,20 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
     for i in range(num_chunks):
         chunk = issues[i * chunk_size : (i + 1) * chunk_size]
         chunk_context = "\n".join([format_issue(iss) for iss in chunk])
-        
-        chunk_prompt = (
-            f"Summarize these GitHub issues relevant to this request: '{prompt}'.\n"
-            f"Focus on themes, bugs, and feature requests.\n\n"
-            f"Issues:\n{chunk_context}"
-        )
+        if (i > 0):
+            chunk_prompt = (
+                f"Summarize these GitHub issues relevant to this request: '{prompt}'.\n"
+                f"Focus on themes, bugs, and feature requests.\n"
+                f"Issues:{chunk_context}\n"
+            )
+        else:
+            chunk_prompt = (
+                "System: You are a senior software triage assistant."
+                "Synthesize issue summaries into a coherent, prioritized analysis.\n"
+                f"User Prompt: '{prompt}'"
+                f"Focus on themes, bugs, and feature requests."
+                f"Issues:\n{chunk_context}"
+            )
         
         # We process chunks sequentially here (could be parallelized with async, but keeping it simple/safe)
         summary = client.generate(chunk_prompt, total_issues)
@@ -199,8 +269,8 @@ def generate_analysis(prompt: str, issues: List[Dict[str, Any]]) -> str:
     combined_summaries = "\n\n".join(chunk_summaries)
     final_prompt = (
         f"You are providing a final analysis of GitHub issues based on summaries of issue batches.\n"
-        f"User Prompt: {prompt}\n\n"
-        f"Intermediate Summaries:\n{combined_summaries}\n\n"
+        f"User Prompt: {prompt}\n"
+        f"Intermediate Summaries:\n{combined_summaries}\n"
         f"Synthesize these summaries into a cohesive answer addressing the user prompt."
     )    
     return client.generate(final_prompt, total_issues)
